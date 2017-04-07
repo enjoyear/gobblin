@@ -15,10 +15,40 @@
  * limitations under the License.
  */
 
+buildscript {
+  repositories {
+    jcenter()
+  }
+  dependencies {
+    classpath 'com.github.jengelman.gradle.plugins:shadow:1.2.3'
+  }
+}
+
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+
 apply plugin: 'java'
+
+configurations {
+  google
+}
+
+configurations.compile.extendsFrom(configurations.google)
 
 dependencies {
   compile project(":gobblin-core")
+
+  google (externalDependency.googleAdWordsAxis) {
+    transitive = false
+  }
+  google (externalDependency.googleAdWordsLib)  {
+    transitive = false
+  }
+  google (externalDependency.guava)  {
+    transitive = false
+  }
+  google ('com.google.api-ads:ads-lib-axis:2.21.0')  {
+    transitive = false
+  }
 
   compile externalDependency.googleAnalytics
   compile externalDependency.googleApiClient
@@ -27,15 +57,32 @@ dependencies {
   compile externalDependency.googleHttpClientGson
   compile externalDependency.googleOauthClient
   compile externalDependency.googleWebmasters
-  compile externalDependency.googleAdWordsAxis
-  compile externalDependency.googleAdWordsLib
-  compile externalDependency.guava
   compile externalDependency.commonsLang3
   compile externalDependency.opencsv
   compile externalDependency.gson
   compile externalDependency.slf4j
   compile externalDependency.junit
 
+  compile externalDependency.googleAdWordsAxis
+  compile externalDependency.googleAdWordsLib
+  compile externalDependency.guava
+
   testCompile externalDependency.mockito
   testCompile externalDependency.testng
+
+
+}
+
+def shadowTask = task("guava-shade", type: ShadowJar) {
+  zip64 true
+  configurations = [project.configurations.google]
+  relocate('com.google', 'gobblin.ingestion.google.shaded.com.google')
+  from sourceSets.main.output
+}
+
+build.dependsOn(tasks['guava-shade'])
+build.dependsOn.remove("jar")
+
+artifacts {
+  compile shadowTask
 }
