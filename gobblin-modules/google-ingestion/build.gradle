@@ -37,16 +37,16 @@ configurations.compile.extendsFrom(configurations.google)
 dependencies {
   compile project(":gobblin-core")
 
-  google (externalDependency.googleAdWordsAxis) {
+  google(externalDependency.googleAdWordsAxis) {
     transitive = false
   }
-  google (externalDependency.googleAdWordsLib)  {
+  google(externalDependency.googleAdWordsLib) {
     transitive = false
   }
-  google (externalDependency.guava)  {
+  google('com.google.guava:guava:20.0') {
     transitive = false
   }
-  google ('com.google.api-ads:ads-lib-axis:2.21.0')  {
+  google('com.google.api-ads:ads-lib-axis:2.21.0') {
     transitive = false
   }
 
@@ -65,12 +65,10 @@ dependencies {
 
   compile externalDependency.googleAdWordsAxis
   compile externalDependency.googleAdWordsLib
-  compile externalDependency.guava
+  compile 'com.google.guava:guava:20.0'
 
   testCompile externalDependency.mockito
   testCompile externalDependency.testng
-
-
 }
 
 def shadowTask = task("guava-shade", type: ShadowJar) {
@@ -81,7 +79,7 @@ def shadowTask = task("guava-shade", type: ShadowJar) {
 }
 
 build.dependsOn(tasks['guava-shade'])
-build.dependsOn.remove("jar")
+//build.dependsOn.remove("jar")
 
 artifacts {
   compile shadowTask
