@@ -40,19 +40,18 @@ import gobblin.source.extractor.DataRecordException;
 import gobblin.source.extractor.Extractor;
 import gobblin.source.extractor.extract.LongWatermark;
 
-import static gobblin.ingestion.google.webmaster.GoogleWebmasterExtractor.dateFormatter;
-
 
 @Slf4j
 public class GoogleAdWordsExtractor implements Extractor<String, String[]> {
   private static final String ACCOUNT_ID_COLUMN = "extraAccId";
+  private final DateTimeFormatter dateFormatter = DateTimeFormat.forPattern("yyyy-MM-dd");
   private final static Splitter SPLIT_BY_COMMA = Splitter.on(",").omitEmptyStrings().trimResults();
   private final WorkUnitState _state;
   private final GoogleAdWordsExtractorIterator _iterator;
   private final DateTime _startDate;
   private final DateTime _expectedEndDate;
   private JsonArray _schema;
-  private final static DateTimeFormatter watermarkFormatter = DateTimeFormat.forPattern("yyyyMMddHHmmss");
+  private final DateTimeFormatter watermarkFormatter = DateTimeFormat.forPattern("yyyyMMddHHmmss");
   private final static HashMap<String, JsonElementConversionFactory.Type> typeConversionMap = new HashMap<>();
   private boolean _successful = false;
 
@@ -92,7 +91,7 @@ public class GoogleAdWordsExtractor implements Extractor<String, String[]> {
 
     HashMap<String, String> allFields = downloadReportFields(rootSession, reportType);
     try {
-      _schema = createSchema(allFields, columnNames);
+      _schema = createSchema(allFields, columnNames, _state.getProp(ConfigurationKeys.EXTRACT_DELTA_FIELDS_KEY, ""));
       log.info(String.format("Schema for report %s: %s", reportType, _schema));
     } catch (IOException e) {
       throw new RuntimeException(String.format("Failed downloading report %s", reportType), e);
@@ -204,7 +203,7 @@ public class GoogleAdWordsExtractor implements Extractor<String, String[]> {
     }
   }
 
-  private JsonArray createSchema(HashMap<String, String> allFields, List<String> requestedColumns)
+  static JsonArray createSchema(HashMap<String, String> allFields, List<String> requestedColumns, String deltaColumn)
       throws IOException {
     JsonArray schema = new JsonArray();
     TreeMap<String, String> selectedColumns;
@@ -222,7 +221,6 @@ public class GoogleAdWordsExtractor implements Extractor<String, String[]> {
       }
     }
 
-    String deltaColumn = _state.getProp(ConfigurationKeys.EXTRACT_DELTA_FIELDS_KEY, "");
     if (!Strings.isNullOrEmpty(deltaColumn) && !selectedColumns.containsKey(deltaColumn)) {
       throw new IOException(String.format("The configured DELTA Column %s doesn't exist!", deltaColumn));
     }
