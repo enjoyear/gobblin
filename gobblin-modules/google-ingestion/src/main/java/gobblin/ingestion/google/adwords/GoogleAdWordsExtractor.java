@@ -23,13 +23,15 @@ import com.google.api.ads.adwords.lib.jaxb.v201609.ReportDefinitionDateRangeType
 import com.google.api.ads.adwords.lib.jaxb.v201609.ReportDefinitionReportType;
 import com.google.api.ads.common.lib.exception.ValidationException;
 import com.google.common.base.Joiner;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.Sets;
 import com.google.gson.JsonArray;
 
-import avro.shaded.com.google.common.base.Optional;
-import avro.shaded.com.google.common.collect.Lists;
+import com.google.common.base.Optional;
+import com.google.common.collect.Lists;
+
 import lombok.extern.slf4j.Slf4j;
 
 import gobblin.configuration.ConfigurationKeys;
@@ -221,8 +223,9 @@ public class GoogleAdWordsExtractor implements Extractor<String, String[]> {
       }
     }
 
-    if (!Strings.isNullOrEmpty(deltaColumn) && !selectedColumns.containsKey(deltaColumn)) {
-      throw new IOException(String.format("The configured DELTA Column %s doesn't exist!", deltaColumn));
+    if (!Strings.isNullOrEmpty(deltaColumn)) {
+      Preconditions.checkArgument(selectedColumns.containsKey(deltaColumn),
+          String.format("The configured DELTA Column %s doesn't exist!", deltaColumn));
     }
 
     for (Map.Entry<String, String> column : selectedColumns.entrySet()) {
