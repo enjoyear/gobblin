@@ -43,6 +43,9 @@ import gobblin.ingestion.google.util.SchemaUtil;
 import gobblin.source.extractor.DataRecordException;
 import gobblin.source.extractor.Extractor;
 import gobblin.source.extractor.extract.LongWatermark;
+import gobblin.source.extractor.partition.Partition;
+import gobblin.source.extractor.watermark.DateWatermark;
+import gobblin.source.extractor.watermark.TimestampWatermark;
 
 
 @Slf4j
@@ -75,10 +78,27 @@ public class GoogleAdWordsExtractor implements Extractor<String, String[]> {
   public GoogleAdWordsExtractor(WorkUnitState state)
       throws Exception {
     _state = state;
-    long lowWatermark = state.getWorkunit().getLowWatermark(LongWatermark.class).getValue();
+    Preconditions.checkArgument(
+        _state.getProp(ConfigurationKeys.SOURCE_QUERYBASED_WATERMARK_TYPE).compareToIgnoreCase("Hour") == 0);
+    Preconditions.checkArgument(_state.getPropAsInt(ConfigurationKeys.SOURCE_QUERYBASED_PARTITION_INTERVAL) == 24);
+
+    Partition partition = Partition.deserialize(_state.getWorkunit());
+    long lowWatermark = partition.getLowWatermark();
+    long expectedHighWatermark = partition.getHighWatermark();
+    /*
+      This change is needed because
+      1. The partition behavior changed due to commit 7d730fcb0263b8ca820af0366818160d638d1336 [7d730fc]
+       by zxcware <zxcware@gmail.com> on April 3, 2017 at 11:47:41 AM PDT
+      2. Google AdWords API only cares about Dates, and are both side inclusive.
+      Therefore, do the following processing.
+     */
+    int dateDiff = partition.isHighWatermarkInclusive() ? 1 : 0;
+    long highWatermarkDate = DateWatermark.adjustWatermark(Long.toString(expectedHighWatermark), dateDiff);
+    long updatedExpectedHighWatermark = TimestampWatermark.adjustWatermark(Long.toString(highWatermarkDate), -1);
+    updatedExpectedHighWatermark = Math.max(lowWatermark, updatedExpectedHighWatermark);
+
     _startDate = watermarkFormatter.parseDateTime(Long.toString(lowWatermark));
-    long highWatermark = state.getWorkunit().getExpectedHighWatermark(LongWatermark.class).getValue();
-    _expectedEndDate = watermarkFormatter.parseDateTime(Long.toString(highWatermark));
+    _expectedEndDate = watermarkFormatter.parseDateTime(Long.toString(updatedExpectedHighWatermark));
 
     GoogleAdWordsCredential credential = new GoogleAdWordsCredential(state);
     AdWordsSession.ImmutableAdWordsSession rootSession = credential.buildRootSession();
