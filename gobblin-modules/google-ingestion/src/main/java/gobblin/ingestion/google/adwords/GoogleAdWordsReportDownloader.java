@@ -23,6 +23,7 @@ import java.util.zip.GZIPInputStream;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.joda.time.DateTime;
+import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 
 import com.github.rholder.retry.Retryer;
@@ -48,13 +49,14 @@ import com.opencsv.CSVParser;
 import lombok.extern.slf4j.Slf4j;
 
 import gobblin.configuration.WorkUnitState;
-import gobblin.ingestion.google.webmaster.GoogleWebmasterExtractor;
 
 
 @Slf4j
 public class GoogleAdWordsReportDownloader {
-  private final static CSVParser splitter = new CSVParser(',', '"', '\\');
+  private final static CSVParser SPLITTER = new CSVParser(',', '"', '\\');
   private final static int SIZE = 4096; //Buffer size for unzipping stream.
+  private final DateTimeFormatter dateFormatter = DateTimeFormat.forPattern("yyyy-MM-dd");
+
   private final boolean _skipReportHeader;
   private final boolean _skipColumnHeader;
   private final boolean _skipReportSummary;
@@ -325,7 +327,7 @@ public class GoogleAdWordsReportDownloader {
       }
       row += "," + account; //append account id to the end of each line
 
-      String[] splits = splitter.parseLine(row);
+      String[] splits = SPLITTER.parseLine(row);
       String[] transformed = new String[splits.length];
       for (int s = 0; s < splits.length; ++s) {
         String trimmed = splits[s].trim();
@@ -361,7 +363,6 @@ public class GoogleAdWordsReportDownloader {
     if (_dateRangeType.equals(ReportDefinitionDateRangeType.ALL_TIME)) {
       return Arrays.asList(Pair.of("", ""));
     } else {
-      DateTimeFormatter dateFormatter = GoogleWebmasterExtractor.dateFormatter;
       if (_dailyPartition) {
         DateTime start = dateFormatter.parseDateTime(_startDate);
         DateTime end = dateFormatter.parseDateTime(_endDate);

@@ -1,12 +1,8 @@
 package gobblin.ingestion.google.adwords;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.Proxy;
 
 import org.apache.commons.lang3.StringUtils;
-
-import com.google.api.client.http.javanet.NetHttpTransport;
 
 import lombok.extern.slf4j.Slf4j;
 

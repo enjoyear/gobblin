@@ -3,12 +3,14 @@ package gobblin.ingestion.google.adwords;
 import java.io.IOException;
 import java.rmi.RemoteException;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
@@ -54,17 +56,20 @@ public class GoogleAdWordsExtractor implements Extractor<String, String[]> {
   private final DateTime _expectedEndDate;
   private JsonArray _schema;
   private final DateTimeFormatter watermarkFormatter = DateTimeFormat.forPattern("yyyyMMddHHmmss");
-  private final static HashMap<String, JsonElementConversionFactory.Type> typeConversionMap = new HashMap<>();
+  private final static Map<String, JsonElementConversionFactory.Type> TYPE_CONVERSION_MAP;
+
   private boolean _successful = false;
 
   static {
-    typeConversionMap.put("string", JsonElementConversionFactory.Type.STRING);
-    typeConversionMap.put("integer", JsonElementConversionFactory.Type.INT);
-    typeConversionMap.put("long", JsonElementConversionFactory.Type.LONG);
-    typeConversionMap.put("float", JsonElementConversionFactory.Type.FLOAT);
-    typeConversionMap.put("double", JsonElementConversionFactory.Type.DOUBLE);
-    typeConversionMap.put("boolean", JsonElementConversionFactory.Type.BOOLEAN);
-    typeConversionMap.put("date", JsonElementConversionFactory.Type.DATE);
+    ConcurrentHashMap<String, JsonElementConversionFactory.Type> typeMap = new ConcurrentHashMap<>();
+    typeMap.put("string", JsonElementConversionFactory.Type.STRING);
+    typeMap.put("integer", JsonElementConversionFactory.Type.INT);
+    typeMap.put("long", JsonElementConversionFactory.Type.LONG);
+    typeMap.put("float", JsonElementConversionFactory.Type.FLOAT);
+    typeMap.put("double", JsonElementConversionFactory.Type.DOUBLE);
+    typeMap.put("boolean", JsonElementConversionFactory.Type.BOOLEAN);
+    typeMap.put("date", JsonElementConversionFactory.Type.DATE);
+    TYPE_CONVERSION_MAP = Collections.unmodifiableMap(typeMap);
   }
 
   public GoogleAdWordsExtractor(WorkUnitState state)
@@ -230,7 +235,7 @@ public class GoogleAdWordsExtractor implements Extractor<String, String[]> {
 
     for (Map.Entry<String, String> column : selectedColumns.entrySet()) {
       String typeString = column.getValue().toLowerCase();
-      JsonElementConversionFactory.Type acceptedType = typeConversionMap.get(typeString);
+      JsonElementConversionFactory.Type acceptedType = TYPE_CONVERSION_MAP.get(typeString);
       if (acceptedType == null) {
         acceptedType = JsonElementConversionFactory.Type.STRING;
       }
