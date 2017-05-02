@@ -259,7 +259,12 @@ public class GoogleAdWordsExtractor implements Extractor<String, String[]> {
       if (acceptedType == null) {
         acceptedType = JsonElementConversionFactory.Type.STRING;
       }
-      schema.add(SchemaUtil.createColumnJson(column.getKey(), true, acceptedType));
+      String columnName = column.getKey();
+      if (!Strings.isNullOrEmpty(deltaColumn) && deltaColumn.equalsIgnoreCase(columnName)) {
+        schema.add(SchemaUtil.createColumnJson(columnName, false, acceptedType));
+      } else {
+        schema.add(SchemaUtil.createColumnJson(columnName, true, acceptedType));
+      }
     }
     return schema;
   }
