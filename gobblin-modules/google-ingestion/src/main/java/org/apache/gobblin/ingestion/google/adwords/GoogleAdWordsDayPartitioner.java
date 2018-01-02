@@ -14,30 +14,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.gobblin.ingestion.google.adwords;
 
-apply plugin: 'java'
+import org.apache.gobblin.configuration.State;
+import org.apache.gobblin.ingestion.google.DayPartitioner;
 
-dependencies {
-  compile project(":gobblin-core")
 
-  compile externalDependency.googleAnalytics
-  compile externalDependency.googleApiClient
-  compile externalDependency.googleDrive
-  compile externalDependency.googleHttpClient
-  compile externalDependency.googleHttpClientGson
-  compile externalDependency.googleOauthClient
-  compile externalDependency.googleWebmasters
+public class GoogleAdWordsDayPartitioner extends DayPartitioner {
 
-  compile externalDependency.googleAdWordsAxis
-  compile externalDependency.googleAdWordsLib
-
-  compile externalDependency.guava
-  compile externalDependency.commonsLang3
-  compile externalDependency.opencsv
-  compile externalDependency.gson
-  compile externalDependency.slf4j
-  compile externalDependency.junit
-
-  testCompile externalDependency.mockito
-  testCompile externalDependency.testng
+  public GoogleAdWordsDayPartitioner(State state, int numBranches, int branchId) {
+    super(state, numBranches, branchId);
+  }
 }
