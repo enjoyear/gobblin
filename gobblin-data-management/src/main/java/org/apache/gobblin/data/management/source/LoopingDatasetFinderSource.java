@@ -18,6 +18,7 @@
 package org.apache.gobblin.data.management.source;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
@@ -137,7 +138,7 @@ public abstract class LoopingDatasetFinderSource<S, D> extends DatasetFinderSour
         this.currentPartitionIterator = getPartitionIterator((PartitionableDataset) equalDataset);
         advanceUntilLargerThan(Iterators.peekingIterator(this.currentPartitionIterator), previousPartitionUrnWatermark);
       } else {
-        this.currentPartitionIterator = Iterators.emptyIterator();
+        this.currentPartitionIterator = Collections.emptyIterator();
       }
     }
 
@@ -163,7 +164,7 @@ public abstract class LoopingDatasetFinderSource<S, D> extends DatasetFinderSour
             dataset.getPartitions(Spliterator.SORTED, LoopingDatasetFinderSource.this.lexicographicalComparator)).iterator();
       } catch (IOException ioe) {
         log.error("Failed to get partitions for dataset " + dataset.getUrn());
-        return Iterators.emptyIterator();
+        return Collections.emptyIterator();
       }
     }
 
