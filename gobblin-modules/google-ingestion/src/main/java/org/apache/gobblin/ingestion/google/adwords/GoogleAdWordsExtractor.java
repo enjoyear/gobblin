@@ -17,12 +17,12 @@
 package org.apache.gobblin.ingestion.google.adwords;
 
 import com.google.api.ads.adwords.axis.factory.AdWordsServices;
-import com.google.api.ads.adwords.axis.v201710.cm.ReportDefinitionField;
-import com.google.api.ads.adwords.axis.v201710.cm.ReportDefinitionServiceInterface;
-import com.google.api.ads.adwords.axis.v201710.mcm.ManagedCustomer;
+import com.google.api.ads.adwords.axis.v201806.cm.ReportDefinitionField;
+import com.google.api.ads.adwords.axis.v201806.cm.ReportDefinitionServiceInterface;
+import com.google.api.ads.adwords.axis.v201806.mcm.ManagedCustomer;
 import com.google.api.ads.adwords.lib.client.AdWordsSession;
-import com.google.api.ads.adwords.lib.jaxb.v201710.ReportDefinitionDateRangeType;
-import com.google.api.ads.adwords.lib.jaxb.v201710.ReportDefinitionReportType;
+import com.google.api.ads.adwords.lib.jaxb.v201806.ReportDefinitionDateRangeType;
+import com.google.api.ads.adwords.lib.jaxb.v201806.ReportDefinitionReportType;
 import com.google.api.ads.common.lib.exception.ValidationException;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
@@ -289,7 +289,7 @@ public class GoogleAdWordsExtractor implements Extractor<String, String[]> {
           adWordsServices.get(rootSession, ReportDefinitionServiceInterface.class);
 
       ReportDefinitionField[] reportDefinitionFields = reportDefinitionService.getReportFields(
-          com.google.api.ads.adwords.axis.v201710.cm.ReportDefinitionReportType.fromString(reportType.toString()));
+          com.google.api.ads.adwords.axis.v201806.cm.ReportDefinitionReportType.fromString(reportType.toString()));
       HashMap<String, String> fields = new HashMap<>();
       for (ReportDefinitionField field : reportDefinitionFields) {
         fields.put(field.getFieldName(), field.getFieldType());

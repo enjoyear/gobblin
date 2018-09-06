@@ -17,12 +17,12 @@
 package org.apache.gobblin.ingestion.google.adwords;
 
 import com.google.api.ads.adwords.axis.factory.AdWordsServices;
-import com.google.api.ads.adwords.axis.utils.v201710.SelectorBuilder;
-import com.google.api.ads.adwords.axis.v201710.mcm.ManagedCustomer;
-import com.google.api.ads.adwords.axis.v201710.mcm.ManagedCustomerPage;
-import com.google.api.ads.adwords.axis.v201710.mcm.ManagedCustomerServiceInterface;
+import com.google.api.ads.adwords.axis.utils.v201806.SelectorBuilder;
+import com.google.api.ads.adwords.axis.v201806.mcm.ManagedCustomer;
+import com.google.api.ads.adwords.axis.v201806.mcm.ManagedCustomerPage;
+import com.google.api.ads.adwords.axis.v201806.mcm.ManagedCustomerServiceInterface;
 import com.google.api.ads.adwords.lib.client.AdWordsSession;
-import com.google.api.ads.adwords.lib.selectorfields.v201710.cm.ManagedCustomerField;
+import com.google.api.ads.adwords.lib.selectorfields.v201806.cm.ManagedCustomerField;
 import com.google.api.ads.common.lib.exception.ValidationException;
 import java.rmi.RemoteException;
 import java.util.HashMap;
