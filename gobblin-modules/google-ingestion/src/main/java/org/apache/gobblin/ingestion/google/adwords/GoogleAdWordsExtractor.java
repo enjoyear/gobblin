@@ -71,7 +71,7 @@ public class GoogleAdWordsExtractor implements Extractor<String, String[]> {
   private JsonArray _schema;
   private final DateTimeFormatter watermarkFormatter = DateTimeFormat.forPattern("yyyyMMddHHmmss");
   private final static Map<String, JsonElementConversionFactory.Type> TYPE_CONVERSION_MAP;
-
+  private final String _datePartitionColumn;
   private boolean _successful = false;
 
   static {
@@ -86,14 +86,15 @@ public class GoogleAdWordsExtractor implements Extractor<String, String[]> {
     TYPE_CONVERSION_MAP = Collections.unmodifiableMap(typeMap);
   }
 
-  public GoogleAdWordsExtractor(WorkUnitState state)
-      throws Exception {
+  public GoogleAdWordsExtractor(WorkUnitState state) throws Exception {
     _state = state;
     Preconditions.checkArgument(
         _state.getProp(ConfigurationKeys.SOURCE_QUERYBASED_WATERMARK_TYPE).compareToIgnoreCase("Hour") == 0);
     Preconditions.checkArgument(_state.getPropAsInt(ConfigurationKeys.SOURCE_QUERYBASED_PARTITION_INTERVAL) == 24);
 
     Partition partition = Partition.deserialize(_state.getWorkunit());
+    _datePartitionColumn = state.getProp(GoogleAdWordsDayPartitioner.DATE_PARTITION_COLUMN, null);
+
     long lowWatermark = partition.getLowWatermark();
     long expectedHighWatermark = partition.getHighWatermark();
     /*
@@ -118,8 +119,8 @@ public class GoogleAdWordsExtractor implements Extractor<String, String[]> {
         ReportDefinitionReportType.valueOf(state.getProp(GoogleAdWordsSource.KEY_REPORT).toUpperCase() + "_REPORT");
     ReportDefinitionDateRangeType dateRangeType =
         ReportDefinitionDateRangeType.valueOf(state.getProp(GoogleAdWordsSource.KEY_DATE_RANGE).toUpperCase());
-    if (!dateRangeType.equals(ReportDefinitionDateRangeType.CUSTOM_DATE) && !dateRangeType
-        .equals(ReportDefinitionDateRangeType.ALL_TIME)) {
+    if (!dateRangeType.equals(ReportDefinitionDateRangeType.CUSTOM_DATE) && !dateRangeType.equals(
+        ReportDefinitionDateRangeType.ALL_TIME)) {
       throw new UnsupportedOperationException("Only support date range of custom_date or all_time");
     }
 
@@ -174,8 +175,8 @@ public class GoogleAdWordsExtractor implements Extractor<String, String[]> {
       if (difference.isEmpty()) {
         return exactAccounts;
       } else {
-        String msg = String
-            .format("The following accounts configured in the exact list don't exist under master account %s: %s",
+        String msg =
+            String.format("The following accounts configured in the exact list don't exist under master account %s: %s",
                 masterCustomerId, Joiner.on(",").join(difference));
         log.error(msg);
         throw new RuntimeException(msg);
@@ -189,8 +190,7 @@ public class GoogleAdWordsExtractor implements Extractor<String, String[]> {
   }
 
   @Override
-  public String getSchema()
-      throws IOException {
+  public String getSchema() throws IOException {
     JsonArray updatedSchema = new JsonArray();
     for (int i = 0; i < _schema.size(); i++) {
       updatedSchema.add(_schema.get(i));
@@ -201,8 +201,7 @@ public class GoogleAdWordsExtractor implements Extractor<String, String[]> {
   }
 
   @Override
-  public String[] readRecord(@Deprecated String[] reuse)
-      throws DataRecordException, IOException {
+  public String[] readRecord(@Deprecated String[] reuse) throws DataRecordException, IOException {
     while (_iterator.hasNext()) {
       return _iterator.next();
     }
@@ -227,21 +226,20 @@ public class GoogleAdWordsExtractor implements Extractor<String, String[]> {
   }
 
   @Override
-  public void close()
-      throws IOException {
+  public void close() throws IOException {
     if (_successful) {
-      log.info(String
-          .format("Successfully downloaded %s reports for [%s, %s).", _state.getProp(GoogleAdWordsSource.KEY_REPORT),
-              dateFormatter.print(_startDate), dateFormatter.print(_expectedEndDate)));
+      log.info(String.format("Successfully downloaded %s reports for [%s, %s).",
+          _state.getProp(GoogleAdWordsSource.KEY_REPORT), dateFormatter.print(_startDate),
+          dateFormatter.print(_expectedEndDate)));
       _state.setActualHighWatermark(_state.getWorkunit().getExpectedHighWatermark(LongWatermark.class));
     } else {
-      log.error(String
-          .format("Failed downloading %s reports for [%s, %s).", _state.getProp(GoogleAdWordsSource.KEY_REPORT),
+      log.error(
+          String.format("Failed downloading %s reports for [%s, %s).", _state.getProp(GoogleAdWordsSource.KEY_REPORT),
               dateFormatter.print(_startDate), dateFormatter.print(_expectedEndDate)));
     }
   }
 
-  static JsonArray createSchema(HashMap<String, String> allFields, List<String> requestedColumns, String deltaColumn)
+  JsonArray createSchema(HashMap<String, String> allFields, List<String> requestedColumns, String deltaColumn)
       throws IOException {
     JsonArray schema = new JsonArray();
     TreeMap<String, String> selectedColumns;
@@ -259,7 +257,7 @@ public class GoogleAdWordsExtractor implements Extractor<String, String[]> {
       }
     }
 
-    if (!Strings.isNullOrEmpty(deltaColumn)) {
+    if (_datePartitionColumn == null && !Strings.isNullOrEmpty(deltaColumn)) {
       Preconditions.checkArgument(selectedColumns.containsKey(deltaColumn),
           String.format("The configured DELTA Column %s doesn't exist!", deltaColumn));
     }
@@ -271,7 +269,14 @@ public class GoogleAdWordsExtractor implements Extractor<String, String[]> {
         acceptedType = JsonElementConversionFactory.Type.STRING;
       }
       String columnName = column.getKey();
-      if (!Strings.isNullOrEmpty(deltaColumn) && deltaColumn.equalsIgnoreCase(columnName)) {
+      if (_datePartitionColumn != null && _datePartitionColumn.equalsIgnoreCase(columnName)) {
+        /*
+          Don't convert a date string to epoch time if _datePartitionColumn is set.
+          A date string format is needed for org.apache.gobblin.ingestion.google.GoogleAdWordsDayPartitioner to create partition column.
+          This feature is needed if we don't want to deploy with LUMOS.
+         */
+        schema.add(SchemaUtil.createColumnJson(columnName, false, JsonElementConversionFactory.Type.STRING));
+      } else if (!Strings.isNullOrEmpty(deltaColumn) && deltaColumn.equalsIgnoreCase(columnName)) {
         schema.add(SchemaUtil.createColumnJson(columnName, false, acceptedType));
       } else {
         schema.add(SchemaUtil.createColumnJson(columnName, true, acceptedType));
@@ -281,8 +286,7 @@ public class GoogleAdWordsExtractor implements Extractor<String, String[]> {
   }
 
   private static HashMap<String, String> downloadReportFields(AdWordsSession rootSession,
-      ReportDefinitionReportType reportType)
-      throws RemoteException {
+      ReportDefinitionReportType reportType) throws RemoteException {
     try {
       AdWordsServices adWordsServices = new AdWordsServices();
       ReportDefinitionServiceInterface reportDefinitionService =

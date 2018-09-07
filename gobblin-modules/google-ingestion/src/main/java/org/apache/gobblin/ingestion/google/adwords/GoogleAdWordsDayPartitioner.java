@@ -22,6 +22,8 @@ import org.apache.gobblin.ingestion.google.DayPartitioner;
 
 public class GoogleAdWordsDayPartitioner extends DayPartitioner {
 
+  public static final String DATE_PARTITION_COLUMN = "writer.partitioner.google_adwords.date_partition_column";
+
   public GoogleAdWordsDayPartitioner(State state, int numBranches, int branchId) {
     super(state, numBranches, branchId);
   }
