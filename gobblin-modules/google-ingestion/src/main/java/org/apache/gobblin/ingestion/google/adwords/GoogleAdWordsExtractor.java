@@ -130,7 +130,8 @@ public class GoogleAdWordsExtractor implements Extractor<String, String[]> {
 
     HashMap<String, String> allFields = downloadReportFields(rootSession, reportType);
     try {
-      _schema = createSchema(allFields, columnNames, _state.getProp(ConfigurationKeys.EXTRACT_DELTA_FIELDS_KEY, ""));
+      _schema = createSchema(allFields, columnNames, _state.getProp(ConfigurationKeys.EXTRACT_DELTA_FIELDS_KEY, ""),
+          _datePartitionColumn);
       log.info(String.format("Schema for report %s: %s", reportType, _schema));
     } catch (IOException e) {
       throw new RuntimeException(String.format("Failed downloading report %s", reportType), e);
@@ -239,8 +240,8 @@ public class GoogleAdWordsExtractor implements Extractor<String, String[]> {
     }
   }
 
-  JsonArray createSchema(HashMap<String, String> allFields, List<String> requestedColumns, String deltaColumn)
-      throws IOException {
+  static JsonArray createSchema(HashMap<String, String> allFields, List<String> requestedColumns, String deltaColumn,
+      String datePartitionColumn) throws IOException {
     JsonArray schema = new JsonArray();
     TreeMap<String, String> selectedColumns;
 
@@ -257,7 +258,7 @@ public class GoogleAdWordsExtractor implements Extractor<String, String[]> {
       }
     }
 
-    if (_datePartitionColumn == null && !Strings.isNullOrEmpty(deltaColumn)) {
+    if (datePartitionColumn == null && !Strings.isNullOrEmpty(deltaColumn)) {
       Preconditions.checkArgument(selectedColumns.containsKey(deltaColumn),
           String.format("The configured DELTA Column %s doesn't exist!", deltaColumn));
     }
@@ -269,7 +270,7 @@ public class GoogleAdWordsExtractor implements Extractor<String, String[]> {
         acceptedType = JsonElementConversionFactory.Type.STRING;
       }
       String columnName = column.getKey();
-      if (_datePartitionColumn != null && _datePartitionColumn.equalsIgnoreCase(columnName)) {
+      if (datePartitionColumn != null && datePartitionColumn.equalsIgnoreCase(columnName)) {
         /*
           Don't convert a date string to epoch time if _datePartitionColumn is set.
           A date string format is needed for org.apache.gobblin.ingestion.google.GoogleAdWordsDayPartitioner to create partition column.
