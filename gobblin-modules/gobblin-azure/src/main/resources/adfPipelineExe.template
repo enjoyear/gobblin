@@ -1,0 +1,5 @@
+source.class=org.apache.gobblin.azure.adf.ADFPipelineSource
+
+gobblin.executable_task.executable_props.template_name=hive_to_td
+gobblin.executable_task.executable_timeout_sec=36000
+metrics.reporting.kafka.config.ssl.keystore.location="/export/content/lid/apps/dwh-gobblin-cluster-worker/i001/var/identity.p12"
