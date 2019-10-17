@@ -24,6 +24,9 @@ dependencies {
   compile project(":gobblin-utility")
   compile project(":gobblin-metrics-libs:gobblin-metrics")
 
+  compile externalDependency.'azure-adal4j'
+  compile externalDependency.'azure-keyvault'
+
   compile externalDependency.avro
   compile externalDependency.jacksonCore
   compile externalDependency.jacksonMapper
@@ -45,10 +48,4 @@ dependencies {
   testCompile externalDependency.testng
 }
 
-configurations {
-  compile {
-    transitive = false
-  }
-}
-
-ext.classification="library"
+ext.classification = "library"
