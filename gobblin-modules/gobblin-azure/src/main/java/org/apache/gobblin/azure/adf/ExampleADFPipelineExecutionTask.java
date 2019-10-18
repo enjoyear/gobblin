@@ -61,20 +61,23 @@ public class ExampleADFPipelineExecutionTask extends ADFPipelineExecutionTask {
     TaskState taskState = this.taskContext.getTaskState();
     WorkUnit wu = taskState.getWorkunit();
 
-    //First: get ADF executor credential from key vault
-    String keyVaultUrl = wu.getProp(ADFConfKeys.AZURE_KEY_VAULT_URL);
-    String spAkvReaderId = wu.getProp(ADFConfKeys.AZURE_SERVICE_PRINCIPAL_KEY_VAULT_READER_ID);
-    String spAkvReaderSecret = wu.getProp(ADFConfKeys.AZURE_SERVICE_PRINCIPAL_KEY_VAULT_READER_SECRET);
-    String spAdfExecSecretName = wu.getProp(ADFConfKeys.AZURE_KEY_VAULT_SECRET_ADF_EXEC);
+    //First: get ADF executor credential
+    //Check whether it's provided directly
+    String spAdfExeSecret = wu.getProp(ADFConfKeys.AZURE_SERVICE_PRINCIPAL_ADF_EXECUTOR_SECRET, "");
+    if (spAdfExeSecret.isEmpty()) {
+      //get ADF executor credential from key vault if not explicitly provided
+      String spAkvReaderId = wu.getProp(ADFConfKeys.AZURE_SERVICE_PRINCIPAL_KEY_VAULT_READER_ID);
+      String spAkvReaderSecret = wu.getProp(ADFConfKeys.AZURE_SERVICE_PRINCIPAL_KEY_VAULT_READER_SECRET);
+      String keyVaultUrl = wu.getProp(ADFConfKeys.AZURE_KEY_VAULT_URL);
+      String spAdfExeSecretName = wu.getProp(ADFConfKeys.AZURE_KEY_VAULT_SECRET_ADF_EXEC);
 
-    KeyVaultSecretRetriever keyVaultSecretRetriever = new KeyVaultSecretRetriever(keyVaultUrl);
-    SecretBundle fetchedSecret = keyVaultSecretRetriever.getSecret(spAkvReaderId, spAkvReaderSecret, spAdfExecSecretName);
-
-    //Second: get ADF executor token from AAD
+      SecretBundle fetchedSecret = new KeyVaultSecretRetriever(keyVaultUrl).getSecret(spAkvReaderId, spAkvReaderSecret, spAdfExeSecretName);
+      spAdfExeSecret = fetchedSecret.value();
+    }
     String aadId = wu.getProp(ADFConfKeys.AZURE_ACTIVE_DIRECTORY_ID);
     String spAdfExeId = wu.getProp(ADFConfKeys.AZURE_SERVICE_PRINCIPAL_ADF_EXECUTOR_ID);
-    String spAdfExeSecret = fetchedSecret.value();
 
+    //Second: get ADF executor token from AAD based on the id and secret
     AuthenticationResult token;
     try {
       CachedAADAuthenticator cachedAADAuthenticator = CachedAADAuthenticator.buildWithAADId(aadId);
