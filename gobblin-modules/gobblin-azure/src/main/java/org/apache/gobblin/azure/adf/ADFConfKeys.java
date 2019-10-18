@@ -34,6 +34,7 @@ public class ADFConfKeys {
   public static final String AZURE_DATA_FACTORY_PREFIX = AZURE_CONF_PREFIX + "data-factory.";
   public static final String AZURE_DATA_FACTORY_NAME = AZURE_DATA_FACTORY_PREFIX + "name";
   public static final String AZURE_DATA_FACTORY_PIPELINE_NAME = AZURE_DATA_FACTORY_PREFIX + "pipeline.name";
+  public static final String AZURE_DATA_FACTORY_PIPELINE_PARAM = AZURE_DATA_FACTORY_PREFIX + "pipeline.params";
   public static final String AZURE_DATA_FACTORY_API_VERSION = AZURE_DATA_FACTORY_PREFIX + "api.version";
 
   // key vault configuration

@@ -27,7 +27,7 @@ import org.apache.gobblin.task.HttpExecutionTask;
 import org.apache.gobblin.util.reflection.GobblinConstructorUtils;
 
 /**
- * A {@link TaskFactory} that creates a {@link ADFPipelineExecutionTask}.
+ * A {@link TaskFactory} that creates an implementation of {@link AbstractADFPipelineExecutionTask}.
  * There is no data publish phase for this task, so this factory uses a {@link NoopPublisher}.
  */
 public class ADFExecutionTaskFactory implements TaskFactory {

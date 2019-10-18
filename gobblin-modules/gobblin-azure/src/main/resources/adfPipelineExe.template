@@ -15,10 +15,10 @@
 # limitations under the License.
 #
 
-gobblin.template.required_attributes="subscription_id,aad_id,rg_name,akv_url,data_factory_name,pieline_name,adf_exe_id,adf_exe_secret"
+gobblin.template.required_attributes="subscription_id,aad_id,rg_name,akv_url,data_factory_name,pieline_name,pipline_params,adf_exe_id,adf_exe_secret"
 
 source.class=org.apache.gobblin.azure.adf.ADFPipelineSource
-gobblin.httptask.class=org.apache.gobblin.azure.adf.ExampleADFPipelineExecutionTask
+gobblin.httptask.class=org.apache.gobblin.azure.adf.ADFPipelineExecutionTask
 gobblin.httptask.type=POST
 
 job.name=ChenJob
@@ -34,7 +34,8 @@ azure.aad.id=${aad_id}
 azure.resource-group.name=${rg_name}
 azure.key-vault.url=${akv_url}
 azure.data-factory.name=${data_factory_name}
-azure.data-factory.pipeline.name=${pieline_name}
+azure.data-factory.pipeline.name=${pipeline_name}
+azure.data-factory.pipeline.params=${pipeline_params}
 azure.data-factory.api.version=2018-06-01
 
 azure.service-principal.adf-executor.id=${adf_exe_id}

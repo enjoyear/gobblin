@@ -42,6 +42,8 @@ import org.testng.IObjectFactory;
 import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
 
+import java.util.Map;
+
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -72,6 +74,7 @@ public class ADFPipelineExecutionTaskTest extends PowerMockTestCase {
     wu.setProp(ADFConfKeys.AZURE_SERVICE_PRINCIPAL_KEY_VAULT_READER_ID, "akv_reader_id");
     wu.setProp(ADFConfKeys.AZURE_SERVICE_PRINCIPAL_KEY_VAULT_READER_SECRET, "akv_reader_secret");
     wu.setProp(ADFConfKeys.AZURE_KEY_VAULT_SECRET_ADF_EXEC, "adf_exec_secret_name");
+    wu.setProp(ADFConfKeys.AZURE_DATA_FACTORY_PIPELINE_PARAM, "{\"date\":\"2019-10-15\",\"customerName\":\"chen\",\"password\":\"qwert12345!\",\"securityToken\":\"12345\"}");
     wu.setProp(HttpExecutionTask.CONF_HTTPTASK_TYPE, HttpExecutionTask.HttpMethod.POST);
 
     WorkUnitState wuState = new WorkUnitState(wu, new State());
@@ -86,7 +89,7 @@ public class ADFPipelineExecutionTaskTest extends PowerMockTestCase {
     when(taskMetrics.getMetricContext()).thenReturn(null);
     when(TaskMetrics.get(taskState)).thenReturn(taskMetrics);
 
-    ExampleADFPipelineExecutionTask task = new ExampleADFPipelineExecutionTask(taskContext);
+    ADFPipelineExecutionTask task = new ADFPipelineExecutionTask(taskContext);
 
     String fetchedAdfExecToken = "my_token";
     PowerMockito.stub(PowerMockito.method(KeyVaultSecretRetriever.class, "getSecret",
@@ -112,12 +115,30 @@ public class ADFPipelineExecutionTaskTest extends PowerMockTestCase {
     Assert.assertEquals(httpRequest.getHeaders("Accept")[0].getValue(), "application/json");
     Assert.assertEquals(httpRequest.getHeaders("Authorization")[0].getValue(), "Bearer " + CachedAADAuthenticatorTest.url1s1sp1token2AccessToken);
     HttpEntity entity = ((HttpPost) httpRequest).getEntity();
-    Assert.assertEquals(EntityUtils.toString(entity), "{\"date\":\"2019-10-15\",\"securityToken\":\"12345\",\"password\":\"qwert12345!\",\"customerName\":\"chen\"}");
+    Map<String, String> map = ADFPipelineExecutionTask.jsonToMap(EntityUtils.toString(entity));
+    Assert.assertEquals(map.size(), 4);
+    Assert.assertEquals(map.get("date"), "2019-10-15");
+    Assert.assertEquals(map.get("customerName"), "chen");
+    Assert.assertEquals(map.get("password"), "qwert12345!");
+    Assert.assertEquals(map.get("securityToken"), "12345");
+  }
+
+  @Test
+  public void testJsonToMap1() {
+    Map<String, String> map = ADFPipelineExecutionTask.jsonToMap("{\"k1\":\"v1\",\"k2\":\"v2\"}");
+    Assert.assertEquals(map.size(), 2);
+    Assert.assertEquals(map.get("k1"), "v1");
+    Assert.assertEquals(map.get("k2"), "v2");
+  }
+
+  @Test
+  public void testJsonToMap2() {
+    Map<String, String> map = ADFPipelineExecutionTask.jsonToMap("");
+    Assert.assertEquals(map.size(), 0);
   }
 
   @ObjectFactory
   public IObjectFactory getObjectFactory() {
-
     return new org.powermock.modules.testng.PowerMockObjectFactory();
   }
 }

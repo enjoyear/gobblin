@@ -64,7 +64,7 @@ public class ADFPipelineSource extends AbstractSource<JsonArray, JsonElement> {
 
   public Extractor<JsonArray, JsonElement> getExtractor(WorkUnitState state) throws IOException {
     throw new UnsupportedOptionsException(String.format("Depending %s to create a %s instead of the default Task",
-        ADFExecutionTaskFactory.class.getSimpleName(), ADFPipelineExecutionTask.class.getSimpleName()));
+        ADFExecutionTaskFactory.class.getSimpleName(), AbstractADFPipelineExecutionTask.class.getSimpleName()));
   }
 
   @Override

@@ -17,89 +17,97 @@
 
 package org.apache.gobblin.azure.adf;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.microsoft.aad.adal4j.AuthenticationResult;
+import com.microsoft.azure.keyvault.models.SecretBundle;
+import joptsimple.internal.Strings;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.gobblin.annotation.Alpha;
+import org.apache.gobblin.azure.aad.AADTokenRequesterImpl;
+import org.apache.gobblin.azure.aad.CachedAADAuthenticator;
+import org.apache.gobblin.azure.key_vault.KeyVaultSecretRetriever;
+import org.apache.gobblin.configuration.WorkUnitState;
 import org.apache.gobblin.runtime.TaskContext;
 import org.apache.gobblin.runtime.TaskState;
 import org.apache.gobblin.source.workunit.WorkUnit;
-import org.apache.gobblin.task.HttpExecutionTask;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.methods.HttpUriRequest;
-import org.apache.http.client.utils.URIBuilder;
 
-import java.io.UnsupportedEncodingException;
-import java.net.URI;
-import java.net.URISyntaxException;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-
 /**
- * A task that execute Azure Data Factory pipelines through REST calls
+ * An example implementation of AbstractADFPipelineExecutionTask
+ * - The pipeline parameters are passed using the configuration {@link ADFConfKeys#AZURE_DATA_FACTORY_PIPELINE_PARAM}
+ * - The authentication token are fetched against AAD through either
+ * 1. {@link ADFConfKeys#AZURE_SERVICE_PRINCIPAL_ADF_EXECUTOR_ID} + {@link ADFConfKeys#AZURE_SERVICE_PRINCIPAL_ADF_EXECUTOR_SECRET}
+ * 2. {@link ADFConfKeys#AZURE_SERVICE_PRINCIPAL_ADF_EXECUTOR_ID} + key vault settings like
+ * -- --  {@link ADFConfKeys#AZURE_KEY_VAULT_URL}
+ * -- --  {@link ADFConfKeys#AZURE_SERVICE_PRINCIPAL_KEY_VAULT_READER_ID}
+ * -- --  {@link ADFConfKeys#AZURE_SERVICE_PRINCIPAL_KEY_VAULT_READER_SECRET}
+ * -- --  {@link ADFConfKeys#AZURE_KEY_VAULT_SECRET_ADF_EXEC}
  */
-@Alpha
 @Slf4j
-public abstract class ADFPipelineExecutionTask extends HttpExecutionTask {
+public class ADFPipelineExecutionTask extends AbstractADFPipelineExecutionTask {
+  private final WorkUnit wu;
 
   public ADFPipelineExecutionTask(TaskContext taskContext) {
     super(taskContext);
+    TaskState taskState = this.taskContext.getTaskState();
+    wu = taskState.getWorkunit();
   }
 
   /**
-   * Provide the authentication token for calling ADF REST endpoints
+   * {@inheritDoc}
    */
-  protected abstract AuthenticationResult getAuthenticationToken();
-
   @Override
-  protected HttpUriRequest createHttpRequest() {
-    TaskState taskState = this.taskContext.getTaskState();
-    WorkUnit wu = taskState.getWorkunit();
+  protected Map<String, String> providePayloads() {
+    return jsonToMap(this.wu.getProp(ADFConfKeys.AZURE_DATA_FACTORY_PIPELINE_PARAM, ""));
+  }
 
-    String subscriptionId = wu.getProp(ADFConfKeys.AZURE_SUBSCRIPTION_ID);
-    String resourceGroupName = wu.getProp(ADFConfKeys.AZURE_RESOURCE_GROUP_NAME);
-    String dataFactoryName = wu.getProp(ADFConfKeys.AZURE_DATA_FACTORY_NAME);
-    String apiVersion = wu.getProp(ADFConfKeys.AZURE_DATA_FACTORY_API_VERSION);
-    ADFPipelineExecutionUriBuilder builder = new ADFPipelineExecutionUriBuilder(subscriptionId, resourceGroupName, dataFactoryName, apiVersion);
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  protected AuthenticationResult getAuthenticationToken() {
+    //First: get ADF executor credential
+    //Check whether it's provided directly
+    String spAdfExeSecret = this.wu.getProp(ADFConfKeys.AZURE_SERVICE_PRINCIPAL_ADF_EXECUTOR_SECRET, "");
+    if (spAdfExeSecret.isEmpty()) {
+      //get ADF executor credential from key vault if not explicitly provided
+      String spAkvReaderId = this.wu.getProp(ADFConfKeys.AZURE_SERVICE_PRINCIPAL_KEY_VAULT_READER_ID);
+      String spAkvReaderSecret = this.wu.getProp(ADFConfKeys.AZURE_SERVICE_PRINCIPAL_KEY_VAULT_READER_SECRET);
+      String keyVaultUrl = this.wu.getProp(ADFConfKeys.AZURE_KEY_VAULT_URL);
+      String spAdfExeSecretName = this.wu.getProp(ADFConfKeys.AZURE_KEY_VAULT_SECRET_ADF_EXEC);
 
-    String pipelineName = wu.getProp(ADFConfKeys.AZURE_DATA_FACTORY_PIPELINE_NAME);
-    URI uri;
+      SecretBundle fetchedSecret = new KeyVaultSecretRetriever(keyVaultUrl).getSecret(spAkvReaderId, spAkvReaderSecret, spAdfExeSecretName);
+      spAdfExeSecret = fetchedSecret.value();
+    }
+    String aadId = this.wu.getProp(ADFConfKeys.AZURE_ACTIVE_DIRECTORY_ID);
+    String spAdfExeId = this.wu.getProp(ADFConfKeys.AZURE_SERVICE_PRINCIPAL_ADF_EXECUTOR_ID);
+
+    //Second: get ADF executor token from AAD based on the id and secret
+    AuthenticationResult token;
     try {
-      String url = builder.buildPipelineRunUri(pipelineName);
-      log.debug("Built Pipeline Execution URL: " + url);
-      URIBuilder pipelineExecutionBuilder = new URIBuilder(url);
-      uri = pipelineExecutionBuilder.build();
-    } catch (URISyntaxException e) {
+      CachedAADAuthenticator cachedAADAuthenticator = CachedAADAuthenticator.buildWithAADId(aadId);
+      token = cachedAADAuthenticator.getToken(AADTokenRequesterImpl.TOKEN_TARGET_RESOURCE_MANAGEMENT, spAdfExeId, spAdfExeSecret);
+    } catch (Exception e) {
+      this.workingState = WorkUnitState.WorkingState.FAILED;
       throw new RuntimeException(e);
     }
+    return token;
+  }
 
-    switch (HttpMethod.valueOf(wu.getProp(CONF_HTTPTASK_TYPE).toUpperCase())) {
-      case POST:
-        return new HttpPost(uri);
-      case GET:
-        return new HttpGet(uri);
-      default:
-        throw new UnsupportedOperationException(String.format("Type HttpTask of type %s is not supported", wu.getProp(CONF_HTTPTASK_TYPE)));
+  public static Map<String, String> jsonToMap(String json) {
+    if (Strings.isNullOrEmpty(json)) {
+      return new HashMap<>();
     }
-  }
 
-  @Override
-  protected Map<String, String> provideHeaderSettings() {
-    AuthenticationResult token = getAuthenticationToken();
-
-    Map<String, String> headers = new HashMap<>();
-    headers.put("Content-Type", "application/json"); //request
-    headers.put("Accept", "application/json"); //response
-    headers.put("Authorization", "Bearer " + token.getAccessToken());
-    return headers;
-  }
-
-  /**
-   * Override to allow it to be tested
-   */
-  protected HttpUriRequest createHttpUriRequest() throws JsonProcessingException, UnsupportedEncodingException {
-    return super.createHttpUriRequest();
+    ObjectMapper mapper = new ObjectMapper();
+    try {
+      return mapper.readValue(json, new TypeReference<HashMap<String, String>>() {
+      });
+    } catch (IOException e) {
+      throw new RuntimeException(String.format("Fail to convert the string %s to a map", json), e);
+    }
   }
 }
