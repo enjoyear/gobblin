@@ -23,6 +23,8 @@ import org.apache.gobblin.runtime.JobState;
 import org.apache.gobblin.runtime.TaskContext;
 import org.apache.gobblin.runtime.task.TaskFactory;
 import org.apache.gobblin.runtime.task.TaskIFace;
+import org.apache.gobblin.task.HttpExecutionTask;
+import org.apache.gobblin.util.reflection.GobblinConstructorUtils;
 
 /**
  * A {@link TaskFactory} that creates a {@link ADFPipelineExecutionTask}.
@@ -31,7 +33,8 @@ import org.apache.gobblin.runtime.task.TaskIFace;
 public class ADFExecutionTaskFactory implements TaskFactory {
   @Override
   public TaskIFace createTask(TaskContext taskContext) {
-    return new ADFPipelineExecutionTask(taskContext);
+    String className = taskContext.getTaskState().getProp(HttpExecutionTask.CONF_HTTPTASK_CLASS);
+    return GobblinConstructorUtils.invokeConstructor(HttpExecutionTask.class, className, taskContext);
   }
 
   @Override

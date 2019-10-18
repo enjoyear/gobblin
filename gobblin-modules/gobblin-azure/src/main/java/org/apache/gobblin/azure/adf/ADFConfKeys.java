@@ -26,11 +26,19 @@ public class ADFConfKeys {
   // service principal configuration
   public static final String AZURE_SERVICE_PRINCIPAL_PREFIX = AZURE_CONF_PREFIX + "service-principal.";
   public static final String AZURE_SERVICE_PRINCIPAL_ADF_EXECUTOR_ID = AZURE_SERVICE_PRINCIPAL_PREFIX + "adf-executor.id";
+  public static final String AZURE_SERVICE_PRINCIPAL_ADF_EXECUTOR_SECRET = AZURE_SERVICE_PRINCIPAL_PREFIX + "adf-executor.secret";
   public static final String AZURE_SERVICE_PRINCIPAL_KEY_VAULT_READER_ID = AZURE_SERVICE_PRINCIPAL_PREFIX + "key-vault-reader.id";
+  public static final String AZURE_SERVICE_PRINCIPAL_KEY_VAULT_READER_SECRET = AZURE_SERVICE_PRINCIPAL_PREFIX + "key-vault-reader.secret";
 
   // data factory configuration
   public static final String AZURE_DATA_FACTORY_PREFIX = AZURE_CONF_PREFIX + "data-factory.";
   public static final String AZURE_DATA_FACTORY_NAME = AZURE_DATA_FACTORY_PREFIX + "name";
   public static final String AZURE_DATA_FACTORY_PIPELINE_NAME = AZURE_DATA_FACTORY_PREFIX + "pipeline.name";
   public static final String AZURE_DATA_FACTORY_API_VERSION = AZURE_DATA_FACTORY_PREFIX + "api.version";
+
+  // key vault configuration
+  public static final String AZURE_KEY_VAULT_PREFIX = AZURE_CONF_PREFIX + "key-vault.";
+  public static final String AZURE_KEY_VAULT_URL = AZURE_KEY_VAULT_PREFIX + "url";
+  public static final String AZURE_KEY_VAULT_SECRET_PREFIX = AZURE_KEY_VAULT_PREFIX + "secret-name.";
+  public static final String AZURE_KEY_VAULT_SECRET_ADF_EXEC = AZURE_KEY_VAULT_SECRET_PREFIX + "adf-executor";
 }

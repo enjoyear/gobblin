@@ -54,6 +54,7 @@ public class CachedAADAuthenticator implements AADAuthenticator {
         .build(new CacheLoader<CacheKey, AuthenticationResult>() {
           @Override
           public AuthenticationResult load(CacheKey cacheKey) throws Exception {
+            log.info("Authenticate against AAD for " + cacheKey);
             AuthenticationResult token = aadTokenRequester.getToken(cacheKey);
             if (token != null) {
               return token;
@@ -99,13 +100,20 @@ public class CachedAADAuthenticator implements AADAuthenticator {
   public AuthenticationResult getToken(String targetResource, String servicePrincipalId, String servicePrincipalSecret)
       throws MalformedURLException, ExecutionException, InterruptedException {
     CacheKey key = new CacheKey(getAuthorityUri(), targetResource, servicePrincipalId, servicePrincipalSecret);
+    return getToken(key);
+  }
+
+  private AuthenticationResult getToken(CacheKey key)
+      throws MalformedURLException, ExecutionException, InterruptedException {
     AuthenticationResult token;
     try {
+      log.info("Getting token for " + key);
       token = cache.get(key);
     } catch (ExecutionException e) {
       Throwable cause = e.getCause();
       if (cause instanceof NullTokenException) {
         //No value found for the key
+        log.warn("No token found for " + key);
         return null;
       }
       //Restore the original cause while value loading
@@ -119,18 +127,23 @@ public class CachedAADAuthenticator implements AADAuthenticator {
       //Throw other value load errors
       throw e;
     }
-    if (token != null) {
-      if (System.currentTimeMillis() >= token.getExpiresOnDate().getTime()) {
-        /**
-         * The token has expired, need to invalidate the token from the cache
-         * Even though the cache itself has a expiration time set, we still need to validate all tokens fetched from the cache
-         */
-
-      }
+    //fetched a token, it won't be null here
+    if (System.currentTimeMillis() >= token.getExpiresOnDate().getTime()) {
+      /**
+       * The token has expired, need to invalidate the token from the cache
+       * Even though the cache itself has a expiration time set, we still need to validate all tokens fetched from the cache
+       */
+      log.info(String.format("The token for %s has expired, will retrieve again.", key));
+      cache.invalidate(key);
+      return getToken(key);
     }
+    //return the unexpired token
     return token;
   }
 
+  /**
+   * The key that uniquely identifies a token
+   */
   @AllArgsConstructor
   @Getter
   @EqualsAndHashCode
@@ -154,6 +167,9 @@ public class CachedAADAuthenticator implements AADAuthenticator {
     }
   }
 
+  /**
+   * An exception to throw when there is no token retrieved for a {@link CacheKey}
+   */
   public static class NullTokenException extends Exception {
     NullTokenException(CacheKey cacheKey) {
       super("No authentication token found for the key " + cacheKey);

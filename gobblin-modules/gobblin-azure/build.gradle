@@ -44,8 +44,9 @@ dependencies {
 
   testCompile project(":gobblin-test-utils")
   testCompile externalDependency.jsonAssert
-  testCompile externalDependency.mockito
   testCompile externalDependency.testng
+  testCompile externalDependency.mockito
+  testCompile externalDependency.powermock
 }
 
 ext.classification = "library"
