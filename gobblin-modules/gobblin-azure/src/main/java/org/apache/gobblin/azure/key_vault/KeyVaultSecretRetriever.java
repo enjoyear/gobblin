@@ -50,9 +50,7 @@ public class KeyVaultSecretRetriever {
    */
   public SecretBundle getSecret(String spId, String spSecret, String secretName) {
     KeyVaultClient kvClient = createKeyVaultClient(spId, spSecret);
-    SecretBundle secret = kvClient.getSecret(this.keyVaultUrl, secretName);
-    System.out.println(secret.value());
-    return secret;
+    return kvClient.getSecret(this.keyVaultUrl, secretName);
   }
 
   /**
@@ -66,9 +64,7 @@ public class KeyVaultSecretRetriever {
    */
   public SecretBundle getSecret(String spId, String spSecret, String secretName, String secretVersion) {
     KeyVaultClient kvClient = createKeyVaultClient(spId, spSecret);
-    SecretBundle secret = kvClient.getSecret(this.keyVaultUrl, secretName, secretVersion);
-    System.out.println(secret.value());
-    return secret;
+    return kvClient.getSecret(this.keyVaultUrl, secretName, secretVersion);
   }
 
   /**
