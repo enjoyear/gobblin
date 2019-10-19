@@ -17,16 +17,15 @@
 
 package org.apache.gobblin.scheduler;
 
-import java.util.Properties;
-import java.util.UUID;
-
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.configuration.ConfigurationConverter;
 import org.apache.commons.configuration.PropertiesConfiguration;
-
-import lombok.extern.slf4j.Slf4j;
-
 import org.apache.gobblin.runtime.app.ServiceBasedAppLauncher;
+import org.apache.gobblin.scheduler.kafka.KafkaJobListenerService;
 import org.apache.gobblin.util.PropertiesUtils;
+
+import java.util.Properties;
+import java.util.UUID;
 
 
 /**
@@ -46,6 +45,7 @@ public class SchedulerDaemon extends ServiceBasedAppLauncher {
     SchedulerService schedulerService = new SchedulerService(properties);
     addService(schedulerService);
     addService(new JobScheduler(properties, schedulerService));
+    addService(new KafkaJobListenerService(properties));
   }
 
   private static String getAppName(Properties properties) {
